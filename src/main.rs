@@ -2,13 +2,16 @@
 
 mod audio;
 mod game;
+mod input;
 mod menu;
 mod parser;
 mod render;
 
+
 use crate::audio::audio_handler::Audio;
 use crate::menu::menu_handler::{AppState, Menu};
 use crate::render::{RendererData, render_init};
+use crate::input::key_bindings::KeyBindings;
 use minifb::{Key, KeyRepeat, Window, WindowOptions};
 use std::f64::consts::PI;
 use std::time::Instant;
@@ -56,6 +59,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     );
 
     let mut game = game::Game::new_game(&renderer_data).unwrap();
+    let mut key_bindings = KeyBindings::load();
     let mut audio = Audio::init();
     let mut menu = Menu::new();
 
@@ -89,7 +93,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 } else if game.player.hp <= 0.0 {
                     app_state = AppState::GameOver;
                 } else {
-                    game.update(&window, &renderer_data, &mut audio);
+                    game.update(&window, &renderer_data, &mut audio, &key_bindings);
                     render::draw_screen(&mut buffer, &renderer_data, &game);
 
                     frame_count += 1;
@@ -126,6 +130,14 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 } else {
                     app_state = menu.update_and_draw_game_over(&mut window, &mut buffer, &mut game);
                 }
+            }
+
+            AppState::ConfigureKeyBindings => {
+                app_state = menu.update_and_draw_key_bindings(
+                    &mut window,
+                    &mut buffer,
+                    &mut key_bindings,
+                );
             }
 
             AppState::Quit => {

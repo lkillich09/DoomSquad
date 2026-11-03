@@ -11,6 +11,7 @@ use std::fs;
 use crate::audio::audio_handler::Audio;
 use crate::game::gamestate::Game;
 use crate::render::RendererData;
+use crate::input::key_bindings::{GameAction, KeyBindings};
 
 const SCREEN_WIDTH: usize = 800;
 const SCREEN_HEIGHT: usize = 450;
@@ -30,6 +31,7 @@ pub enum AppState {
     Playing,
     GameOver,
     GamePaused,
+    ConfigureKeyBindings,
     Quit,
 }
 
@@ -47,12 +49,14 @@ struct ButtonDef {
 /// we only need to manually track the mouse state for edge detection (clicks).
 pub struct Menu {
     was_mouse_down: bool,
+    waiting_for_key: Option<GameAction>,
 }
 
 impl Menu {
     pub fn new() -> Self {
         Self {
             was_mouse_down: false,
+            waiting_for_key: None,
         }
     }
 
@@ -73,6 +77,7 @@ impl Menu {
         let click1 = window.is_key_pressed(Key::Key1, KeyRepeat::No);
         let click2 = window.is_key_pressed(Key::Key2, KeyRepeat::No);
         let click3 = window.is_key_pressed(Key::Key3, KeyRepeat::No);
+        let click4 = window.is_key_pressed(Key::Key4, KeyRepeat::No);
 
         // Render titles
         Self::draw_text_centered(
@@ -97,16 +102,16 @@ impl Menu {
         // Define button layouts
         let btn_start = ButtonDef {
             x: 230,
-            y: 160,
+            y: 145,
             w: 340,
-            h: 50,
+            h: 45,
             text: "[1] NEW GAME".to_string(),
         };
         let btn_load = ButtonDef {
             x: 230,
-            y: 230,
+            y: 205,
             w: 340,
-            h: 50,
+            h: 45,
             text: "[2] LOAD MAP".to_string(),
         };
 
@@ -115,19 +120,28 @@ impl Menu {
         } else {
             "[3] SOUND: OFF"
         };
+
         let btn_audio = ButtonDef {
             x: 230,
-            y: 300,
+            y: 265,
             w: 340,
-            h: 50,
+            h: 45,
             text: audio_text.to_string(),
+        };
+
+        let btn_key_bindings = ButtonDef {
+            x: 230,
+            y: 325,
+            w: 340,
+            h: 45,
+            text: "[4] KEY BINDINGS".to_string(),
         };
 
         let btn_quit = ButtonDef {
             x: 230,
-            y: 370,
+            y: 385,
             w: 340,
-            h: 50,
+            h: 45,
             text: "[ESC] QUIT GAME".to_string(),
         };
 
@@ -153,6 +167,10 @@ impl Menu {
         if self.draw_flat_button(buffer, &btn_audio, mx, my) && clicked || click3 {
             audio.set_muted(!audio.is_muted);
             return AppState::StartScreen;
+        }
+
+        if (self.draw_flat_button(buffer, &btn_key_bindings, mx, my) && clicked) || click4 {
+             return AppState::ConfigureKeyBindings;
         }
 
         if self.draw_flat_button(buffer, &btn_quit, mx, my) && clicked {
@@ -412,4 +430,151 @@ impl Menu {
             cursor_x += 8 * scale;
         }
     }
-}
+
+    pub fn update_and_draw_key_bindings(
+        &mut self,
+        window: &mut Window,
+        buffer: &mut [u32],
+        key_bindings: &mut KeyBindings,
+    ) -> AppState {
+        //Draw a background
+        buffer.fill(COL_BG_MAIN);
+
+        //Headline
+        Self::draw_text_centered(
+            buffer,
+            SCREEN_WIDTH,
+            SCREEN_HEIGHT,
+            "KEY BINDINGS",
+            40,
+            3,
+            COL_TEXT_WHITE,
+        );
+
+        let actions = [
+            (GameAction::MoveForward, "Move Forward"),
+            (GameAction::MoveBackward, "Move Backward"),
+            (GameAction::MoveLeft, "Move Left"),
+            (GameAction::MoveRight, "Move Right"),
+            (GameAction::Sprint, "Sprint"),
+            (GameAction::Crouch, "Crouch"),
+            (GameAction::Jump, "Jump"),
+            (GameAction::RocketJump, "Rocket Jump"),
+            (GameAction::Interact, "Interact"),
+            (GameAction::ToggleAimMode, "Toggle Aim Mode"),
+            (GameAction::FireBullet, "Fire Bullet"),
+            (GameAction::FireArrow, "Fire Arrow"),
+            (GameAction::TurnLeft, "Turn Left"),
+            (GameAction::TurnRight, "Turn Right"),
+            (GameAction::AimUp, "Aim Up"),
+            (GameAction::AimDown, "Aim Down"),
+            (GameAction::ToggleGodMode, "God Mode"),
+            (GameAction::LockEnemies, "Lock Enemies"),
+        ];
+
+        //Processing Keyboard Input
+        let pressed_keys = window.get_keys_pressed(KeyRepeat::No);
+
+        if let Some(key) = pressed_keys.first().copied() {
+            if let Some(action) = self.waiting_for_key.take() {
+                if key != Key::Escape {
+                    key_bindings.set_key(action, key);
+                }
+            } else if key == Key::Escape {
+                return AppState::StartScreen;
+            }
+        }
+
+        //Detect a mouse click
+        let mouse_down = window.get_mouse_down(MouseButton::Left);
+        let clicked = mouse_down && !self.was_mouse_down;
+
+        if clicked && self.waiting_for_key.is_none() {
+            if let Some((mx, my)) = window.get_mouse_pos(MouseMode::Clamp) {
+                let mx = mx as usize;
+                let my = my as usize;
+
+                let column = if mx >= 80 && mx <= 380 {
+                    Some(0)
+                } else if mx >= 400 && mx <= 760 {
+                    Some(1)
+                } else {
+                    None
+                };
+                
+                if let Some(column) = column {
+                    for row in 0..9 {
+                        let y: usize = 100 + row * 32;
+
+                        if my >= y.saturating_sub(5) && my <= y + 24 {
+                            let index = column * 9 + row;
+                            self.waiting_for_key = Some(actions[index].0.clone());
+                            break;
+                        }
+                    }
+                }
+            }
+        }
+
+        self.was_mouse_down = mouse_down;
+
+        // Display actions and current keys
+        for (index, (action, label)) in actions.iter().enumerate() {
+            let column = index / 9;
+            let row = index % 9;
+
+            let x = if column == 0 { 100 } else { 420 };
+            let y = 100 + row * 32;
+
+            let key_name = key_bindings
+                .get_key(action.clone())
+                .map(|key| key.as_str())
+                .unwrap_or("None");
+
+            let text = format!("{}: {}", label, key_name);
+
+            Self::draw_text(
+                buffer,
+                SCREEN_WIDTH,
+                SCREEN_HEIGHT,
+                &text,
+                x,
+                y,
+                2,
+                COL_TEXT_WHITE,
+            );
+        }
+
+        // Show key input hint
+        if let Some(action) = &self.waiting_for_key {
+            let action_name = actions
+                .iter()
+                .find(|(a, _)| a == action)
+                .map(|(_, label)| *label)
+                .unwrap_or("Unknown");
+
+            Self::draw_text_centered(
+                buffer,
+                SCREEN_WIDTH,
+                SCREEN_HEIGHT,
+                &format!("Press a key for: {}", action_name),
+                410,
+                2,
+                COL_TITLE_RED,
+            );
+        } else {
+            Self::draw_text_centered(
+                buffer,
+                SCREEN_WIDTH,
+                SCREEN_HEIGHT,
+                "Click an action to change its key - ESC to return",
+                410,
+                1,
+                COL_TEXT_WHITE,
+            );
+        }
+
+        AppState::ConfigureKeyBindings
+    }
+}     
+      

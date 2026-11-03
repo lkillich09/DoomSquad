@@ -1,0 +1,1 @@
+(bindings:{MoveForward:"M",ToggleAimMode:"E",MoveRight:"D",MoveBackward:"S",MoveLeft:"A",AimDown:"Down",TurnLeft:"Left",LockEnemies:"L",TurnRight:"Right",RocketJump:"Q",Jump:"Space",FireBullet:"RightCtrl",Sprint:"LeftShift",FireArrow:"RightShift",ToggleGodMode:"G",Interact:"F",AimUp:"Up",Crouch:"C"})

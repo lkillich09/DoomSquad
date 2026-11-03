@@ -16,6 +16,7 @@ use super::map::Map;
 use super::player::Player;
 use crate::game::damage_calculation::damage_check;
 use crate::game::interactables::InteractableEvent::*;
+use crate::input::key_bindings::KeyBindings;
 use crate::parser::entities_parser::parse_entities;
 use crate::parser::interactables_parser::*;
 use crate::parser::player_parser::parse_player_position;
@@ -81,7 +82,13 @@ impl Game {
         }
     }
 
-    pub fn update(&mut self, window: &Window, renderer_data: &RendererData, audio: &mut Audio) {
+    pub fn update(
+        &mut self,
+        window: &Window,
+        renderer_data: &RendererData,
+        audio: &mut Audio,
+        key_bindings: &KeyBindings,
+    ) {
         //update all interactables and add possible spawn events
         let mut interactables = std::mem::take(&mut self.interactables);
         let mut interactables_spawns = Vec::new();
@@ -95,13 +102,15 @@ impl Game {
 
         let mut entity_spawns = Vec::new();
         //update player
-        let event = self.player.update(window, &self.map, renderer_data, audio);
+        let event = self
+            .player
+            .update(window, &self.map, renderer_data, audio, key_bindings);
         //add possible spawn events
         entity_spawns.extend(event);
 
         //update all entites and add possible spawn events
         for entity in &mut self.entities {
-            let event = entity.update(window, &self.map, &self.player.mover, renderer_data, audio);
+            let event = entity.update(window, &self.map, &self.player.mover, renderer_data, audio, key_bindings);
             entity_spawns.extend(event);
         }
 
