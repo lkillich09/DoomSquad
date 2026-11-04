@@ -22,6 +22,7 @@ pub enum GameAction {
     AimDown,
     ToggleGodMode,
     LockEnemies,
+    MenuBack,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -51,6 +52,7 @@ impl Default for KeyBindings {
             (GameAction::AimDown, "Down".to_string()),
             (GameAction::ToggleGodMode, "G".to_string()),
             (GameAction::LockEnemies, "L".to_string()),
+            (GameAction::MenuBack, "Escape".to_string()),
         ]);
 
         Self { bindings }

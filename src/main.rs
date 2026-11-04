@@ -11,8 +11,8 @@ mod render;
 use crate::audio::audio_handler::Audio;
 use crate::menu::menu_handler::{AppState, Menu};
 use crate::render::{RendererData, render_init};
-use crate::input::key_bindings::KeyBindings;
-use minifb::{Key, KeyRepeat, Window, WindowOptions};
+use crate::input::key_bindings::{GameAction, KeyBindings};
+use minifb::{KeyRepeat, Window, WindowOptions};
 use std::f64::consts::PI;
 use std::time::Instant;
 
@@ -66,13 +66,15 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let mut app_state = AppState::StartScreen;
 
     while window.is_open() {
-        let escape_clicked = window.is_key_pressed(Key::Escape, KeyRepeat::No);
+        let menu_back_clicked = key_bindings
+    .get_minifb_key(GameAction::MenuBack)
+    .is_some_and(|key| window.is_key_pressed(key, KeyRepeat::No));
 
         match app_state {
             AppState::StartScreen => {
                 window.set_cursor_visibility(true);
 
-                if escape_clicked {
+                if menu_back_clicked {
                     break;
                 } else {
                     app_state = menu.update_and_draw_start_menu(
@@ -88,7 +90,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             AppState::Playing => {
                 window.set_cursor_visibility(false);
 
-                if escape_clicked {
+                if menu_back_clicked {
                     app_state = AppState::GamePaused;
                 } else if game.player.hp <= 0.0 {
                     app_state = AppState::GameOver;
@@ -110,7 +112,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             AppState::GamePaused => {
                 window.set_cursor_visibility(true);
 
-                if escape_clicked {
+                if menu_back_clicked {
                     app_state = AppState::StartScreen;
                 } else {
                     app_state = menu.update_and_draw_game_paused(
@@ -125,7 +127,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             AppState::GameOver => {
                 window.set_cursor_visibility(true);
 
-                if escape_clicked {
+                if menu_back_clicked {
                     app_state = AppState::StartScreen;
                 } else {
                     app_state = menu.update_and_draw_game_over(&mut window, &mut buffer, &mut game);

@@ -469,6 +469,7 @@ impl Menu {
             (GameAction::AimUp, "Aim Up"),
             (GameAction::AimDown, "Aim Down"),
             (GameAction::ToggleGodMode, "God Mode"),
+            (GameAction::MenuBack, "Back to Menu"),
             (GameAction::LockEnemies, "Lock Enemies"),
         ];
 
@@ -477,10 +478,8 @@ impl Menu {
 
         if let Some(key) = pressed_keys.first().copied() {
             if let Some(action) = self.waiting_for_key.take() {
-                if key != Key::Escape {
                     key_bindings.set_key(action, key);
-                }
-            } else if key == Key::Escape {
+            } else if key_bindings.get_minifb_key(GameAction::MenuBack) == Some(key) {
                 return AppState::StartScreen;
             }
         }
@@ -503,11 +502,11 @@ impl Menu {
                 };
                 
                 if let Some(column) = column {
-                    for row in 0..9 {
+                    for row in 0..10 {
                         let y: usize = 100 + row * 32;
 
                         if my >= y.saturating_sub(5) && my <= y + 24 {
-                            let index = column * 9 + row;
+                            let index = column * 10 + row;
                             self.waiting_for_key = Some(actions[index].0.clone());
                             break;
                         }
@@ -520,8 +519,8 @@ impl Menu {
 
         // Display actions and current keys
         for (index, (action, label)) in actions.iter().enumerate() {
-            let column = index / 9;
-            let row = index % 9;
+            let column = index / 10;
+            let row = index % 10;
 
             let x = if column == 0 { 100 } else { 420 };
             let y = 100 + row * 32;
